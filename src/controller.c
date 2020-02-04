@@ -6,6 +6,7 @@
 #include <string.h>
 #include "libdragon.h"
 #include "regsinternal.h"
+#include "siinternal.h"
 
 /**
  * @defgroup controller Controller Subsystem
@@ -79,7 +80,55 @@ void controller_init()
 {
     memset(&current, 0, sizeof(current));
     memset(&last, 0, sizeof(last));
+    si_init(4, true);
 }
+
+
+/**
+ * @brief Initialize the controller subsystem with given settings.
+ * 
+ * Scanning for a single controller or switching off accessories can save cycles per frame.
+ * 
+ * @param[in] controller_number
+ *      Number of controllers you'll need input from.
+ * 
+ * @param[in] enable_accessories
+ *      True if you need easy access to accessories such as the controller or rumble pak.
+ */
+ void controller_config(int controller_number, bool enable_accessories)
+{
+    memset(&current, 0, sizeof(current));
+    memset(&last, 0, sizeof(last));
+    si_init(controller_number, enable_accessories);
+}
+
+
+
+/**
+ * @brief Asychronously request controller state.
+ *
+ * A request is made to the controller sub-system, but you will need to wait for a DMA to occur.
+ * After making this request, the results can picked up from #controller_get_response which will
+ * ensure the DMA is complete and then return the results.
+  */
+void controller_request()
+{
+
+}
+
+/**
+ * @brief Get requested controller state.
+ *
+ * Before calling this function, you must first call #controller_request, or it will return out of date or bad data.
+ * This function will ensure that the DMA kicked off by controller_request has completed for providing a pointer to that data.
+ * Having two separate calls enables you to spend the cycles waiting for the DMA doing something else.  If you don't need that level of
+ * optimization, you can call #controller_scan for a single, blocking call.
+ *
+ * @param[out] data controller_data populated here.
+ *
+ */
+void controller_get_response( struct controller_data * data )
+{}
 
 /**
  * @brief Wait until the SI is finished with a DMA request

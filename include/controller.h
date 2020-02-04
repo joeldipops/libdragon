@@ -14,7 +14,7 @@
 /**
  * @name Bitmasks for controller status
  * @see #get_controllers_present
- * @see #get_accessories_present    
+ * @see #get_accessories_present
  * @{
  */
 /** @brief Controller 1 Inserted */
@@ -25,6 +25,22 @@
 #define CONTROLLER_3_INSERTED   0x00F0
 /** @brief Controller 4 Inserted */
 #define CONTROLLER_4_INSERTED   0x000F
+/** @} */
+
+
+/**
+ * @name Controller Id values
+ * @{
+ */
+#define CONTROLLER_UNPLUGGED    0xFFFF
+#define CONTROLLER_UNKNOWN      0x0000
+#define CONTROLLER_STANDARD     0x0500
+#define CONTROLLER_DANCEPAD     0x0500
+#define CONTROLLER_VRU          0x0001
+#define CONTROLLER_MOUSE        0x0200
+#define CONTROLLER_KEYBOARD     0x0002
+#define CONTROLLER_DENSHA       0x2004
+#define GBA_HANDHELD            0x0004
 /** @} */
 
 /**
@@ -59,13 +75,24 @@
 /** @brief SI Controller Data */
 typedef struct SI_condat
 {
-    /** @brief Unused padding bits */
-    unsigned : 16;
-    /** @brief Status of the last command */
-    unsigned err : 2;
-    /** @brief Unused padding bits */
-    unsigned : 14;
-
+    union {
+        struct {
+            /** @brief Unused padding bits */
+            unsigned : 16;
+            /** @brief Status of the last command */
+            unsigned err : 2;
+            /** @brief Unused padding bits */
+            unsigned : 14;
+        };
+        struct device_type_t {
+            /** @brief The type of controller eg standard, VRU, fishing rod */
+            unsigned id : 16;
+            /** @brief The accessory plugged in to the controller */
+            unsigned acc: 8;
+            unsigned state: 8;
+        };
+        uint32_t raw;
+    } device;
     union
     {
         struct
@@ -110,6 +137,33 @@ typedef struct SI_condat
             /** @brief State of the Y button */
             signed y : 8;
         };
+		struct mouse_state_t {
+			uint16_t buttons;
+			uint8_t movex;
+			uint8_t movey;
+			uint8_t filler[4];
+		} mouse;
+		struct keyboard_state_t {
+			uint16_t raw[3];
+			uint8_t bits;
+			uint8_t filler;
+		} keyboard;
+		struct densha_de_go_t {
+			uint16_t buttons;
+			uint8_t filler[6];
+		} densha_de_go;
+
+		struct dancepad_t {
+			uint32_t raw;
+			uint8_t filler[4];
+		} dancepad;
+		
+		struct fishing_rod_t {
+			uint32_t raw;
+			uint8_t filler[4];
+		} fishing_rod;
+
+        uint32_t raw[2];
     };
 } _SI_condat;
 
@@ -178,6 +232,8 @@ extern "C" {
 #endif
 
 void controller_init();
+void controller_request();
+void controller_read_response( struct controller_data * data );
 void controller_read( struct controller_data * data);
 void controller_read_gc( struct controller_data * data, const uint8_t rumble[4]);
 void controller_read_gc_origin( struct controller_origin_data * data);
