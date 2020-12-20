@@ -4,6 +4,8 @@
 #include <stdint.h>
 #include <libdragon.h>
 
+#define LEFT_MARGIN 10
+
 static volatile uint32_t animcounter = 0;
 static resolution_t resolution = RESOLUTION_320x240;
 static bitdepth_t depth = DEPTH_16_BPP;
@@ -22,7 +24,8 @@ void update_counter( int ovfl )
     animcounter++;
 }
 
-void set_texts() {
+void set_texts()
+{
     RES_TEXT[0] = "320x240";
     RES_TEXT[1] = "640x480";
     RES_TEXT[2] = "256x240";
@@ -58,6 +61,7 @@ int main(void)
 
     // Initialize peripherals 
     display_init(resolution, depth, 2, gamma_mode, antialias_mode);
+    display_toggle_highres_mode(is_high_res_mode);
     dfs_init( DFS_DEFAULT_LOCATION );
     rdp_init();
     controller_init();
@@ -103,18 +107,18 @@ int main(void)
         graphics_set_color( 0x0, 0xFFFFFFFF );
 
         // Hardware spritemap test 
-        graphics_draw_text( disp, 20, 20, "Hardware spritemap test" );
+        graphics_draw_text( disp, LEFT_MARGIN + 20, 20, "Graphics Mode Demo" );
 
         char *text = "";
 
         sprintf(text, "Resolution: %s", RES_TEXT[resolution]);
-        graphics_draw_text( disp, 20, 40, text);
+        graphics_draw_text( disp, LEFT_MARGIN + 20, 40, text);
         sprintf(text, "Gamma: %s", GAMMA_TEXT[gamma_mode]);
-        graphics_draw_text( disp, 20, 50, text);
+        graphics_draw_text( disp, LEFT_MARGIN + 20, 50, text);
         sprintf(text, "AA: %s", AA_TEXT[antialias_mode]);
-        graphics_draw_text( disp, 20, 60, text);
+        graphics_draw_text( disp, LEFT_MARGIN + 20, 60, text);
         sprintf(text, "High Res Mode: %s", is_high_res_mode ? "On" : "Off");
-        graphics_draw_text( disp, 20, 70, text);
+        graphics_draw_text( disp, LEFT_MARGIN + 20, 70, text);
 
         // Assure RDP is ready for new commands 
         rdp_sync( SYNC_PIPE );
@@ -135,7 +139,7 @@ int main(void)
         rdp_load_texture( 0, 0, MIRROR_DISABLED, plane );
         
         // Display a stationary sprite of adequate size to fit in TMEM 
-        rdp_draw_sprite( 0, 20, 80, MIRROR_DISABLED );
+        rdp_draw_sprite( 0, LEFT_MARGIN + 20, 80, MIRROR_DISABLED );
 
         /* Since the RDP is very very limited in texture memory, we will use the spritemap feature to display
            all four pieces of this sprite individually in order to use the RDP at all */
@@ -148,7 +152,12 @@ int main(void)
             rdp_load_texture_stride( 0, 0, MIRROR_DISABLED, mudkip, i );
         
             // Display a stationary sprite to demonstrate backwards compatibility 
-            rdp_draw_sprite( 0, 50 + (20 * (i % 2)), 80 + (20 * (i / 2)), MIRROR_DISABLED );
+            rdp_draw_sprite( 
+                0, 
+                LEFT_MARGIN + 50 + (20 * (i % 2)),
+                80 + (20 * (i / 2)),
+                MIRROR_DISABLED 
+            );
         }
 
         // Ensure the RDP is ready to receive sprites 
@@ -158,7 +167,7 @@ int main(void)
         rdp_load_texture_stride( 0, 0, MIRROR_DISABLED, earthbound, ((animcounter / 15) & 1) ? 1: 0 );
         
         // Display walking NESS animation 
-        rdp_draw_sprite( 0, 20, 120, MIRROR_DISABLED );
+        rdp_draw_sprite( 0, LEFT_MARGIN + 20, 120, MIRROR_DISABLED );
 
         // Ensure the RDP is ready to receive sprites 
         rdp_sync( SYNC_PIPE );
@@ -167,7 +176,7 @@ int main(void)
         rdp_load_texture_stride( 0, 0, MIRROR_DISABLED, earthbound, ((animcounter / 8) & 0x7) * 2 );
         
         // Display rotating NESS animation 
-        rdp_draw_sprite( 0, 50, 120, MIRROR_DISABLED );
+        rdp_draw_sprite( 0, LEFT_MARGIN + 50, 120, MIRROR_DISABLED );
 
         // Inform the RDP we are finished drawing and that any pending operations should be flushed 
         rdp_detach_display();
@@ -212,8 +221,6 @@ int main(void)
                 default:
                     break;
             }
-
-
         }
     }
 }

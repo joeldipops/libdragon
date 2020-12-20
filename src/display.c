@@ -257,7 +257,7 @@ static void __display_callback_standard_mode()
     }
 }
 
-static bool _v_limits_switch;
+static bool _v_limits_switch = 0;
 
 /**
  * @brief Interrupt handler for vertical blank
@@ -267,7 +267,6 @@ static bool _v_limits_switch;
  */
 static void __display_callback_highres_mode() 
 {
-
     // Each time the VI_interrupt fires, switch between drawing odd and even numbered scanlines to achieve high-res mode.
     VI_regs_t* vi_registers = (VI_regs_t*) REGISTER_BASE;
 
@@ -281,18 +280,37 @@ static void __display_callback_highres_mode()
 static void (*__display_callback)();
 
 /**
+ * @brief One last frame in highres mode to replace initial values.
+ */
+static void __tear_down_highres_mode()
+{
+    unregister_VI_handler( __tear_down_highres_mode );
+
+    _v_limits_switch = 0;
+
+    __display_callback_highres_mode();
+
+    __display_callback = __display_callback_standard_mode;
+
+    register_VI_handler( __display_callback );
+}
+
+/**
  * @brief Optimise display for vertical resolutions of greater than 240 pixels.
  */
 void display_toggle_highres_mode(bool use_mode) {
     unregister_VI_handler( __display_callback );
+
     if (use_mode && __height > 240)
     {
-        register_VI_handler( __display_callback_highres_mode );
+        __display_callback = __display_callback_highres_mode;
     }
     else
     {
-        register_VI_handler( __display_callback_standard_mode );
+        __display_callback = __tear_down_highres_mode;
     }
+
+    register_VI_handler( __display_callback );
 }
 
 /**
@@ -486,10 +504,12 @@ void display_init( resolution_t res, bitdepth_t bit, uint32_t num_buffers, gamma
     enable_interrupts();
 
     /* Set which line to call back on in order to flip screens */
-    if (__height > 240) {
+    if (__height > 240) 
+    {
         __display_callback = __display_callback_highres_mode;
-
-    } else {
+    }
+    else
+    {
         __display_callback = __display_callback_standard_mode;
     }
     register_VI_handler( __display_callback );
