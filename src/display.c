@@ -244,7 +244,7 @@ static void __write_dram_register( void const * const dram_val )
  *
  * If there is another frame to display, display the frame
  */
-static void __display_callback()
+static void __display_callback_standard_mode()
 {
     /* Only swap frames if we have a new frame to swap, otherwise just
        leave up the current frame */
@@ -258,6 +258,7 @@ static void __display_callback()
 }
 
 static bool _v_limits_switch;
+
 /**
  * @brief Interrupt handler for vertical blank
  *
@@ -274,7 +275,24 @@ static void __display_callback_highres_mode()
     vi_registers->v_limits = __v_limits_values[_v_limits_switch];
     MEMORY_BARRIER();
 
-    __display_callback();
+    __display_callback_standard_mode();
+}
+
+static void (*__display_callback)();
+
+/**
+ * @brief Optimise display for vertical resolutions of greater than 240 pixels.
+ */
+void display_toggle_highres_mode(bool use_mode) {
+    unregister_VI_handler( __display_callback );
+    if (use_mode && __height > 240)
+    {
+        register_VI_handler( __display_callback_highres_mode );
+    }
+    else
+    {
+        register_VI_handler( __display_callback_standard_mode );
+    }
 }
 
 /**
@@ -318,7 +336,7 @@ void display_init( resolution_t res, bitdepth_t bit, uint32_t num_buffers, gamma
             break;
     }
 
-    /* Ensure that buffering is either double or twiple */
+    /* Ensure that buffering is either double or triple */
     if( num_buffers != 2 && num_buffers != 3 )
     {
         __buffers = NUM_BUFFERS;
@@ -468,11 +486,13 @@ void display_init( resolution_t res, bitdepth_t bit, uint32_t num_buffers, gamma
     enable_interrupts();
 
     /* Set which line to call back on in order to flip screens */
-    if (__height == 480) {
-        register_VI_handler( __display_callback_highres_mode );
+    if (__height > 240) {
+        __display_callback = __display_callback_highres_mode;
+
     } else {
-        register_VI_handler( __display_callback );
+        __display_callback = __display_callback_standard_mode;
     }
+    register_VI_handler( __display_callback );
 
     set_VI_interrupt( 1, 0x200 );
 }
